@@ -1,4 +1,4 @@
-package bo.edu.usfx.biblioteca.legado;
+package bo.edu.usfx.biblioteca.dominio;
 
 /** Ejemplar del acervo de la biblioteca. */
 public class Libro {

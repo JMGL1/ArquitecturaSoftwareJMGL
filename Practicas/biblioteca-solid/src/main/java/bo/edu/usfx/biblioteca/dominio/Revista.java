@@ -1,5 +1,6 @@
-package bo.edu.usfx.biblioteca.legado;
+package bo.edu.usfx.biblioteca.dominio;
 
+import bo.edu.usfx.biblioteca.dominio.MaterialBiblioteca;
 import java.time.LocalDate;
 
 /** Revista: prestamo corto, sin renovacion... o eso dice el reglamento. */

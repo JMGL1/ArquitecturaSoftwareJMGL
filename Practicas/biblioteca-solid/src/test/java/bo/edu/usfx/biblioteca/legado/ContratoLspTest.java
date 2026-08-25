@@ -1,5 +1,9 @@
 package bo.edu.usfx.biblioteca.legado;
 
+import bo.edu.usfx.biblioteca.dominio.Revista;
+import bo.edu.usfx.biblioteca.dominio.LibroReferencia;
+import bo.edu.usfx.biblioteca.dominio.MaterialBiblioteca;
+import bo.edu.usfx.biblioteca.dominio.LibroGeneral;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

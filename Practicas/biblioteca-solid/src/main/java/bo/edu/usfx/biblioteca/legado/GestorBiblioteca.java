@@ -1,5 +1,8 @@
 package bo.edu.usfx.biblioteca.legado;
 
+import bo.edu.usfx.biblioteca.dominio.Prestamo;
+import bo.edu.usfx.biblioteca.dominio.Usuario;
+import bo.edu.usfx.biblioteca.dominio.Libro;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;

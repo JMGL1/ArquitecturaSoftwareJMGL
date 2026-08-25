@@ -1,5 +1,7 @@
 package bo.edu.usfx.biblioteca.legado;
 
+import bo.edu.usfx.biblioteca.dominio.LibroReferencia;
+import bo.edu.usfx.biblioteca.dominio.MaterialBiblioteca;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
