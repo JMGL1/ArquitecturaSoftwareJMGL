@@ -1,59 +1,36 @@
 package bo.edu.usfx.biblioteca.legado;
 
-import bo.edu.usfx.biblioteca.dominio.Revista;
-import bo.edu.usfx.biblioteca.dominio.LibroReferencia;
-import bo.edu.usfx.biblioteca.dominio.MaterialBiblioteca;
-import bo.edu.usfx.biblioteca.dominio.LibroGeneral;
+import bo.edu.usfx.biblioteca.dominio.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-/**
- * Esta clase DOCUMENTA la violacion de LSP del paso 3.
- *
- * Las dos primeras pruebas pasan hoy porque congelan el comportamiento roto.
- * Despues de refactorizar la jerarquia, tendras que reescribirlas: ese cambio
- * es parte de la evidencia que se entrega.
- */
-@DisplayName("Contrato de la jerarquia MaterialBiblioteca (paso 3 - LSP)")
-class ContratoLspTest {
-
-    private final LocalDate HOY = LocalDate.of(2026, 8, 25);
+@DisplayName("Sustituibilidad de Liskov (LSP)")
+public class ContratoLspTest {
 
     @Test
-    @DisplayName("un subtipo rompe el contrato de prestar()")
-    void subtipoRompeElContrato() {
-        MaterialBiblioteca material = new LibroReferencia("R-030", "Enciclopedia Britanica");
+    @DisplayName("LSP: Ningun material Prestable lanza excepcion al ser prestado")
+    void sustituibilidadGarantizada() {
+        Material libro = new LibroGeneral("1", "Clean Code");
+        Material revista = new Revista("2", "Java Magazine");
+        Material referencia = new LibroReferencia("3", "Diccionario"); // No estallará
 
-        assertThatThrownBy(() -> material.prestar(HOY))
-                .isInstanceOf(UnsupportedOperationException.class);
-    }
+        Catalogo catalogo = new Catalogo(List.of(libro, revista, referencia));
+        LocalDate hoy = LocalDate.now();
 
-    @Test
-    @DisplayName("otro subtipo promete menos: renovar() no renueva nada")
-    void subtipoPrometeMenos() {
-        MaterialBiblioteca revista = new Revista("REV-12", "IEEE Software");
-
-        LocalDate limite = revista.prestar(HOY);
-
-        assertThat(revista.renovar(limite)).isEqualTo(limite);   // no avanzo ni un dia
-    }
-
-    @Test
-    @DisplayName("el cliente se defiende con instanceof y try/catch")
-    void elClienteSeLlenaDeComprobaciones() {
-        CatalogoBiblioteca catalogo = new CatalogoBiblioteca();
-        catalogo.agregar(new LibroGeneral("005.1 M379c", "Clean Architecture"));
-        catalogo.agregar(new Revista("REV-12", "IEEE Software"));
-        catalogo.agregar(new LibroReferencia("R-030", "Enciclopedia Britanica"));
-
-        List<String> comprobantes = catalogo.prestarTodo(HOY);
-
-        assertThat(comprobantes).hasSize(2);   // el de referencia se cayo por el camino
+        // El cliente procesa la lista sin try/catch. 
+        // Si hay una excepcion UnsupportedOperationException, el test fallará.
+        assertDoesNotThrow(() -> {
+            List<String> comprobantes = catalogo.prestarTodo(hoy);
+            
+            // Liskov en accion: solo se prestan los 2 que tienen el ROL correcto. 
+            // El de referencia es ignorado pacíficamente.
+            assertThat(comprobantes).hasSize(2);
+            assertThat(comprobantes.get(0)).contains("Clean Code");
+            assertThat(comprobantes.get(1)).contains("Java Magazine");
+        });
     }
 }
