@@ -1,10 +1,7 @@
 package bo.edu.usfx.biblioteca.legado;
 
 import bo.edu.usfx.biblioteca.aplicacion.ServicioPrestamos;
-import bo.edu.usfx.biblioteca.dominio.Prestamo;
-import bo.edu.usfx.biblioteca.dominio.Usuario;
-import bo.edu.usfx.biblioteca.dominio.Libro;
-import bo.edu.usfx.biblioteca.dominio.PoliticaPrestamo;
+import bo.edu.usfx.biblioteca.dominio.*;
 import bo.edu.usfx.biblioteca.infraestructura.NotificadorSmtp;
 import bo.edu.usfx.biblioteca.infraestructura.RepositorioPrestamosJdbc;
 import bo.edu.usfx.biblioteca.presentacion.ComprobantePrestamo;
@@ -16,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.LocalDate;
+import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -23,6 +21,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class PruebasCaracterizacionTest {
 
     private final LocalDate HOY = LocalDate.of(2026, 8, 25);
+    
+    // Catalogo ensamblado con las 4 reglas
+    private final CatalogoPoliticas catalogo = new CatalogoPoliticas(List.of(
+            new PoliticaEstudiante(), new PoliticaDocente(), new PoliticaAdministrativo(), new PoliticaExterno()
+    ));
 
     private Usuario estudiante() { return new Usuario("218123", "Ana Quispe", "ana@usfx.bo", "ESTUDIANTE"); }
     private Libro libro()        { return new Libro("005.1 M379c", "Clean Architecture", "Robert C. Martin"); }
@@ -30,18 +33,15 @@ class PruebasCaracterizacionTest {
     @Test
     @DisplayName("un estudiante recibe 7 dias de plazo")
     void plazoDelEstudiante() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), new PoliticaPrestamo());
-        
+        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Prestamo prestamo = servicio.registrar(estudiante(), libro(), HOY);
-
         assertThat(prestamo.getFechaLimite()).isEqualTo(LocalDate.of(2026, 9, 1));
     }
 
     @Test
     @DisplayName("el comprobante conserva su formato exacto")
     void formatoDelComprobante() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), new PoliticaPrestamo());
-        
+        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Prestamo prestamo = servicio.registrar(estudiante(), libro(), HOY);
         String comprobante = new ComprobantePrestamo().imprimir(prestamo);
 
@@ -56,9 +56,8 @@ class PruebasCaracterizacionTest {
     @Test
     @DisplayName("el estudiante no puede tener mas de 3 ejemplares activos")
     void limiteDeEjemplares() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), new PoliticaPrestamo());
+        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Usuario ana = estudiante();
-        
         for (int i = 1; i <= 3; i++) {
             servicio.registrar(ana, new Libro("SIG-" + i, "Titulo " + i, "Autor"), HOY);
         }
@@ -79,24 +78,21 @@ class PruebasCaracterizacionTest {
             "EXTERNO,      100, 200.0" 
     })
     void tarifaDeMulta(String tipo, int diasRetraso, double esperado) {
-        PoliticaPrestamo politica = new PoliticaPrestamo();
         Usuario usuario = new Usuario("999", "Prueba", "p@usfx.bo", tipo);
         Prestamo prestamo = new Prestamo(usuario, libro(), HOY, HOY.plusDays(7));
-
-        double multa = politica.calcularMulta(prestamo, HOY.plusDays(7 + diasRetraso));
-
+        
+        double multa = catalogo.para(usuario).calcularMulta(prestamo, HOY.plusDays(7 + diasRetraso));
         assertThat(multa).isEqualTo(esperado);
     }
 
     @Test
     @DisplayName("la devolucion libera el ejemplar y reporta la multa")
     void devolucion() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), new PoliticaPrestamo());
+        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Libro ejemplar = libro();
-        
         Prestamo prestamo = servicio.registrar(estudiante(), ejemplar, HOY);
+        
         String recibo = servicio.registrarDevolucion(prestamo, HOY.plusDays(12));
-
         assertThat(recibo).isEqualTo("Devolucion registrada. Multa: Bs 10.0");
         assertThat(ejemplar.isDisponible()).isTrue();
     }
@@ -105,7 +101,7 @@ class PruebasCaracterizacionTest {
     @DisplayName("el reporte mensual mantiene su cabecera CSV")
     void cabeceraDelReporte() {
         RepositorioPrestamosJdbc repositorio = new RepositorioPrestamosJdbc();
-        ServicioPrestamos servicio = new ServicioPrestamos(repositorio, new NotificadorSmtp(), new PoliticaPrestamo());
+        ServicioPrestamos servicio = new ServicioPrestamos(repositorio, new NotificadorSmtp(), catalogo);
         
         servicio.registrar(estudiante(), libro(), HOY);
         String reporteCsv = new ReportePrestamosCsv(repositorio).generarMensual(8, 2026);
