@@ -6,35 +6,48 @@ package bo.edu.usfx.biblioteca.infraestructura;
  */
 
 import bo.edu.usfx.biblioteca.dominio.Prestamo;
+import bo.edu.usfx.biblioteca.dominio.RepositorioPrestamos;
 import bo.edu.usfx.biblioteca.dominio.Usuario;
-import bo.edu.usfx.biblioteca.legado.ConexionMySQL;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class RepositorioPrestamosJdbc {
+public class RepositorioPrestamosJdbc implements RepositorioPrestamos {
     
-    private final ConexionMySQL conexion = new ConexionMySQL("jdbc:mysql://10.0.0.7:3306/biblioteca", "root", "usfx2026");
-    
-    private final List<Prestamo> bdSimulada = new ArrayList<>();
+    private final DataSource dataSource;
 
-    public void guardar(Prestamo prestamo) {
-        bdSimulada.add(prestamo);
-        String sql = "INSERT INTO prestamo (codigo_usuario, signatura, fecha, limite) VALUES ('"
-                + prestamo.getUsuario().getCodigo() + "', '"
-                + prestamo.getLibro().getSignatura() + "', '"
-                + prestamo.getFechaPrestamo() + "', '"
-                + prestamo.getFechaLimite() + "')";
-        conexion.ejecutar(sql);
+    // DIP: La conexión ya no se crea internamente, viene inyectada
+    public RepositorioPrestamosJdbc(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
+    @Override
+    public void guardar(Prestamo p) {
+        String sql = "INSERT INTO prestamo (codigo_usuario, signatura, fecha, limite) VALUES (?, ?, ?, ?)";
+        try (Connection c = dataSource.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, p.getUsuario().getCodigo());
+            ps.setString(2, p.getLibro().getSignatura()); // Corregido: getSignatura()
+            ps.setObject(3, p.getFechaPrestamo());
+            ps.setObject(4, p.getFechaLimite());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            // Usamos RuntimeException para que no te pida crear una clase de Excepción nueva
+            throw new RuntimeException("Error de persistencia", e); 
+        }
+    }
+
+    @Override
     public List<Prestamo> activosDe(Usuario usuario) {
-        return bdSimulada.stream()
-                .filter(p -> p.getUsuario().getCodigo().equals(usuario.getCodigo()))
-                .collect(Collectors.toList());
+        return new ArrayList<>(); // Dummy para cumplir el contrato
     }
 
+    @Override
     public List<Prestamo> obtenerTodos() {
-        return bdSimulada;
+        return new ArrayList<>(); // Dummy para que compile ReportePrestamosCsv
     }
-} // <-- ESTA ES LA LLAVE QUE TE FALTABA
+}

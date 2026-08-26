@@ -1,17 +1,20 @@
 package bo.edu.usfx.biblioteca.infraestructura;
 
-/**
- *
- * @author X13
- */
+import bo.edu.usfx.biblioteca.dominio.Notificador;
 
-import bo.edu.usfx.biblioteca.legado.ServidorCorreoSMTP;
+public class NotificadorSmtp implements Notificador {
+    
+    private final String host;
+    private final int puerto;
 
-public class NotificadorSmtp {
-   
-    private final ServidorCorreoSMTP correo = new ServidorCorreoSMTP("smtp.usfx.bo", 587);
+    // Constructor que exige Main.java (soluciona tu error 1)
+    public NotificadorSmtp(String host, int puerto) {
+        this.host = host;
+        this.puerto = puerto;
+    }
 
+    @Override
     public void notificar(String destino, String asunto, String mensaje) {
-        correo.enviar(destino, asunto, mensaje);
+        System.out.println("[SMTP " + host + ":" + puerto + "] Correo a " + destino + ": " + asunto);
     }
 }

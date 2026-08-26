@@ -2,18 +2,20 @@ package bo.edu.usfx.biblioteca.legado;
 
 import bo.edu.usfx.biblioteca.aplicacion.ServicioPrestamos;
 import bo.edu.usfx.biblioteca.dominio.*;
-import bo.edu.usfx.biblioteca.infraestructura.NotificadorSmtp;
-import bo.edu.usfx.biblioteca.infraestructura.RepositorioPrestamosJdbc;
 import bo.edu.usfx.biblioteca.presentacion.ComprobantePrestamo;
 import bo.edu.usfx.biblioteca.presentacion.ReportePrestamosCsv;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -22,10 +24,35 @@ class PruebasCaracterizacionTest {
 
     private final LocalDate HOY = LocalDate.of(2026, 8, 25);
     
-    // Catalogo ensamblado con las 4 reglas
     private final CatalogoPoliticas catalogo = new CatalogoPoliticas(List.of(
             new PoliticaEstudiante(), new PoliticaDocente(), new PoliticaAdministrativo(), new PoliticaExterno()
     ));
+
+    // DOBLES DE PRUEBA (Fakes) gracias a la Inversión de Dependencias (DIP)
+    private RepositorioPrestamos repoFake;
+    private Notificador notificadorFake;
+    private ServicioPrestamos servicio;
+
+    @BeforeEach
+    void setUp() {
+        // Simulamos la BD en memoria para la prueba
+        repoFake = new RepositorioPrestamos() {
+            private final List<Prestamo> bdSimulada = new ArrayList<>();
+            @Override public void guardar(Prestamo p) { bdSimulada.add(p); }
+            @Override public List<Prestamo> activosDe(Usuario u) {
+                return bdSimulada.stream().filter(p -> p.getUsuario().getCodigo().equals(u.getCodigo())).collect(Collectors.toList());
+            }
+            @Override public List<Prestamo> obtenerTodos() { return bdSimulada; }
+        };
+
+        // Simulamos el servidor de correo para que no envíe nada de verdad
+        notificadorFake = (destino, asunto, mensaje) -> {
+            System.out.println("[SMTP Fake] Mensaje enviado a " + destino);
+        };
+
+        // Inyectamos las dependencias falsas al servicio real
+        servicio = new ServicioPrestamos(repoFake, notificadorFake, catalogo);
+    }
 
     private Usuario estudiante() { return new Usuario("218123", "Ana Quispe", "ana@usfx.bo", "ESTUDIANTE"); }
     private Libro libro()        { return new Libro("005.1 M379c", "Clean Architecture", "Robert C. Martin"); }
@@ -33,7 +60,6 @@ class PruebasCaracterizacionTest {
     @Test
     @DisplayName("un estudiante recibe 7 dias de plazo")
     void plazoDelEstudiante() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Prestamo prestamo = servicio.registrar(estudiante(), libro(), HOY);
         assertThat(prestamo.getFechaLimite()).isEqualTo(LocalDate.of(2026, 9, 1));
     }
@@ -41,7 +67,6 @@ class PruebasCaracterizacionTest {
     @Test
     @DisplayName("el comprobante conserva su formato exacto")
     void formatoDelComprobante() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Prestamo prestamo = servicio.registrar(estudiante(), libro(), HOY);
         String comprobante = new ComprobantePrestamo().imprimir(prestamo);
 
@@ -56,7 +81,6 @@ class PruebasCaracterizacionTest {
     @Test
     @DisplayName("el estudiante no puede tener mas de 3 ejemplares activos")
     void limiteDeEjemplares() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Usuario ana = estudiante();
         for (int i = 1; i <= 3; i++) {
             servicio.registrar(ana, new Libro("SIG-" + i, "Titulo " + i, "Autor"), HOY);
@@ -88,7 +112,6 @@ class PruebasCaracterizacionTest {
     @Test
     @DisplayName("la devolucion libera el ejemplar y reporta la multa")
     void devolucion() {
-        ServicioPrestamos servicio = new ServicioPrestamos(new RepositorioPrestamosJdbc(), new NotificadorSmtp(), catalogo);
         Libro ejemplar = libro();
         Prestamo prestamo = servicio.registrar(estudiante(), ejemplar, HOY);
         
@@ -100,11 +123,8 @@ class PruebasCaracterizacionTest {
     @Test
     @DisplayName("el reporte mensual mantiene su cabecera CSV")
     void cabeceraDelReporte() {
-        RepositorioPrestamosJdbc repositorio = new RepositorioPrestamosJdbc();
-        ServicioPrestamos servicio = new ServicioPrestamos(repositorio, new NotificadorSmtp(), catalogo);
-        
         servicio.registrar(estudiante(), libro(), HOY);
-        String reporteCsv = new ReportePrestamosCsv(repositorio).generarMensual(8, 2026);
+        String reporteCsv = new ReportePrestamosCsv(repoFake).generarMensual(8, 2026);
 
         assertThat(reporteCsv)
                 .startsWith("codigo;titulo;fecha;limite;multa\n")
