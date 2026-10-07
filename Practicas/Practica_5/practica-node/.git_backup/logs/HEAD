@@ -1,0 +1,6 @@
+0000000000000000000000000000000000000000 76ff9345673c348dc0c232aff2edb2e628ea7842 nacho <joseignaciogallardolaura995@gmail.com> 1791395767 -0400	commit (initial): Parte 1: Primeros pasos, modulos y event loop
+76ff9345673c348dc0c232aff2edb2e628ea7842 383cc8b4d081ed61237e384d60b1093d2b304d39 nacho <joseignaciogallardolaura995@gmail.com> 1791395767 -0400	commit: Parte 2: Asincronia con callbacks, promesas y async/await
+383cc8b4d081ed61237e384d60b1093d2b304d39 1ce67dd956a64e34440321900326de64622c73fd nacho <joseignaciogallardolaura995@gmail.com> 1791395767 -0400	commit: Parte 3: Servidor HTTP nativo
+1ce67dd956a64e34440321900326de64622c73fd 93a28e5c712bfbdc8c503bbd605b50e1e96e0c55 nacho <joseignaciogallardolaura995@gmail.com> 1791395767 -0400	commit: Parte 4: Express, rutas y middlewares
+93a28e5c712bfbdc8c503bbd605b50e1e96e0c55 41f80a7f1b9234cfa08b86da588695725687fa37 nacho <joseignaciogallardolaura995@gmail.com> 1791395767 -0400	commit: Proyecto Final: API de la tienda en capas y pruebas
+41f80a7f1b9234cfa08b86da588695725687fa37 74390ae64b4380eba46bbf27eb9693b13d33411c nacho <joseignaciogallardolaura995@gmail.com> 1791396133 -0400	commit: Corregir api.test.js para usar node:test nativo (13 pruebas)
